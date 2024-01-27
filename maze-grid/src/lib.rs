@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 use std::fmt;
 
-struct Grid {
-    rows: u32,
-    columns: u32,
-    cell_width: usize, // XXX default this to 1
-    cell_height: u32, // XXX default this to 0
-    linked_cells: HashSet<((u32, u32), (u32, u32))>, // XXX default this to an empty set
+pub struct Grid {
+    pub rows: u32,
+    pub columns: u32,
+    pub cell_width: usize, // XXX default this to 1
+    pub cell_height: u32, // XXX default this to 0
+    pub linked_cells: HashSet<((u32, u32), (u32, u32))>, // XXX default this to an empty set
 }
 
 impl Grid {
@@ -19,7 +19,7 @@ impl Grid {
         !(self.linked_cells.contains(&(cell_a, cell_b)) || self.linked_cells.contains(&(cell_b, cell_a)))
     }
 
-    fn smash_wall(&mut self, cell_a: (u32, u32), cell_b: (u32, u32)) {
+    pub fn smash_wall(&mut self, cell_a: (u32, u32), cell_b: (u32, u32)) {
         let row_diff = (cell_a.0 as i32) - (cell_b.0 as i32);
         let col_diff = (cell_a.1 as i32) - (cell_b.1 as i32);
 
