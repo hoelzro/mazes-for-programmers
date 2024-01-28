@@ -20,7 +20,7 @@ impl Grid {
         }
     }
 
-    fn has_wall(&self, cell_a: (u32, u32), cell_b: (u32, u32)) -> bool {
+    pub fn has_wall(&self, cell_a: (u32, u32), cell_b: (u32, u32)) -> bool {
         let row_diff = (cell_a.0 as i32) - (cell_b.0 as i32);
         let col_diff = (cell_a.1 as i32) - (cell_b.1 as i32);
 
