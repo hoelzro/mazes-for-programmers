@@ -53,14 +53,14 @@ fn cross_char(north: bool, east: bool, south: bool, west: bool) -> &'static str 
 impl fmt::Display for Grid {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // draw the top of the grid
-        write!(f, "┌");
+        write!(f, "┌")?;
         for right_col in 1..self.columns {
             let left_col = right_col - 1;
-            write!(f, "{}", "─".repeat(self.cell_width));
-            write!(f, "{}", if self.has_wall((0, left_col), (0, right_col)) { "┬" } else { "─" });
+            write!(f, "{}", "─".repeat(self.cell_width))?;
+            write!(f, "{}", if self.has_wall((0, left_col), (0, right_col)) { "┬" } else { "─" })?;
         }
-        write!(f, "{}", "─".repeat(self.cell_width));
-        write!(f, "┐\n");
+        write!(f, "{}", "─".repeat(self.cell_width))?;
+        write!(f, "┐\n")?;
 
         // draw rows
         for bottom_row in 1..self.rows {
@@ -68,19 +68,19 @@ impl fmt::Display for Grid {
 
             // draw spacer lines
             for _ in 0..self.cell_height {
-                write!(f, "│");
+                write!(f, "│")?;
 
                 for right_col in 1..self.columns {
                     let left_col = right_col - 1;
-                    write!(f, "{}", " ".repeat(self.cell_width));
-                    write!(f, "{}", if self.has_wall((top_row, left_col), (top_row, right_col)) { "│" } else { " " });
+                    write!(f, "{}", " ".repeat(self.cell_width))?;
+                    write!(f, "{}", if self.has_wall((top_row, left_col), (top_row, right_col)) { "│" } else { " " })?;
                 }
-                write!(f, "{}", " ".repeat(self.cell_width));
-                write!(f, "│\n");
+                write!(f, "{}", " ".repeat(self.cell_width))?;
+                write!(f, "│\n")?;
             }
 
             // draw lines with walls
-            write!(f, "{}", if self.has_wall((top_row, 0), (bottom_row, 0)) { "├" } else { "│" });
+            write!(f, "{}", if self.has_wall((top_row, 0), (bottom_row, 0)) { "├" } else { "│" })?;
             for right_col in 1..self.columns {
                 let left_col = right_col - 1;
 
@@ -89,31 +89,31 @@ impl fmt::Display for Grid {
                 let has_south_wall = self.has_wall((bottom_row, left_col), (bottom_row, right_col));
                 let has_west_wall = self.has_wall((top_row, left_col), (bottom_row, left_col));
 
-                write!(f, "{}", (if has_west_wall { "─" } else { " " }).repeat(self.cell_width));
-                write!(f, "{}", cross_char(has_north_wall, has_east_wall, has_south_wall, has_west_wall));
+                write!(f, "{}", (if has_west_wall { "─" } else { " " }).repeat(self.cell_width))?;
+                write!(f, "{}", cross_char(has_north_wall, has_east_wall, has_south_wall, has_west_wall))?;
             }
-            write!(f, "{}", (if self.has_wall((top_row, self.columns - 1), (bottom_row, self.columns - 1)) { "─" } else { " " }).repeat(self.cell_width));
-            write!(f, "{}", if self.has_wall((top_row, self.columns - 1), (bottom_row, self.columns - 1)) { "┤\n" } else { "│\n" });
+            write!(f, "{}", (if self.has_wall((top_row, self.columns - 1), (bottom_row, self.columns - 1)) { "─" } else { " " }).repeat(self.cell_width))?;
+            write!(f, "{}", if self.has_wall((top_row, self.columns - 1), (bottom_row, self.columns - 1)) { "┤\n" } else { "│\n" })?;
         }
 
         // draw bottom of the grid
         for _ in 0..self.cell_height {
-            write!(f, "│");
+            write!(f, "│")?;
             for right_col in 1..self.columns {
                 let left_col = right_col - 1;
-                write!(f, "{}", " ".repeat(self.cell_width));
-                write!(f, "{}", if self.has_wall((self.rows - 1, left_col), (self.rows - 1, right_col)) { "│" } else { " " });
+                write!(f, "{}", " ".repeat(self.cell_width))?;
+                write!(f, "{}", if self.has_wall((self.rows - 1, left_col), (self.rows - 1, right_col)) { "│" } else { " " })?;
             }
-            write!(f, "{}", " ".repeat(self.cell_width));
-            write!(f, "│\n");
+            write!(f, "{}", " ".repeat(self.cell_width))?;
+            write!(f, "│\n")?;
         }
-        write!(f, "└");
+        write!(f, "└")?;
         for right_col in 1..self.columns {
             let left_col = right_col - 1;
-            write!(f, "{}", "─".repeat(self.cell_width));
-            write!(f, "{}", if self.has_wall((self.rows - 1, left_col), (self.rows - 1, right_col)) { "┴" } else { "─" });
+            write!(f, "{}", "─".repeat(self.cell_width))?;
+            write!(f, "{}", if self.has_wall((self.rows - 1, left_col), (self.rows - 1, right_col)) { "┴" } else { "─" })?;
         }
-        write!(f, "{}", "─".repeat(self.cell_width));
+        write!(f, "{}", "─".repeat(self.cell_width))?;
         write!(f, "┘")
     }
 }
