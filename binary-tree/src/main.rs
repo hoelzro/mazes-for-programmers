@@ -1,5 +1,4 @@
 use rand::random;
-use std::collections::HashSet;
 
 use maze_grid::Grid;
 
@@ -25,13 +24,7 @@ fn binary_tree_algorithm(grid: &mut Grid) {
 }
 
 fn main() {
-    let mut g = Grid{
-        rows: 4,
-        columns: 4,
-        cell_width: 1,
-        cell_height: 0,
-        linked_cells: HashSet::new(),
-    };
+    let mut g = Grid::new(4, 4, 1, 0);
 
     binary_tree_algorithm(&mut g);
 
