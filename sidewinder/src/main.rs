@@ -2,9 +2,7 @@ use rand::prelude::*;
 
 use maze_grid::Grid;
 
-fn sidewinder_algorithm(grid: &mut Grid) {
-    let mut rng = thread_rng();
-
+fn sidewinder_algorithm(grid: &mut Grid, rng: &mut ThreadRng) {
     for row in 0..grid.rows {
         for col in 0..grid.columns {
             let move_east = if row == grid.rows - 1 {
@@ -12,7 +10,7 @@ fn sidewinder_algorithm(grid: &mut Grid) {
             } else if col == grid.columns - 1 {
                 false
             } else {
-                random()
+                rng.gen()
             };
 
             if move_east {
@@ -36,7 +34,7 @@ fn sidewinder_algorithm(grid: &mut Grid) {
                 }
 
                 // pick a random cell among those in the run, and smash the wall
-                let smash_col = (run_start_col..=col).choose(&mut rng).unwrap();
+                let smash_col = (run_start_col..=col).choose(rng).unwrap();
                 grid.smash_wall((row, smash_col), (row + 1, smash_col));
             }
         }
@@ -46,7 +44,8 @@ fn sidewinder_algorithm(grid: &mut Grid) {
 fn main() {
     let mut g = Grid::new(4, 4, 1, 0);
 
-    sidewinder_algorithm(&mut g);
+    let mut rng = thread_rng();
+    sidewinder_algorithm(&mut g, &mut rng);
 
     println!("{}", g);
 }

@@ -1,8 +1,8 @@
-use rand::random;
+use rand::prelude::*;
 
 use maze_grid::Grid;
 
-fn binary_tree_algorithm(grid: &mut Grid) {
+fn binary_tree_algorithm(grid: &mut Grid, rng: &mut ThreadRng) {
     for row in 0..grid.rows {
         for col in 0..grid.columns {
             let src = (row, col);
@@ -11,7 +11,7 @@ fn binary_tree_algorithm(grid: &mut Grid) {
             } else if col == grid.columns - 1 {
                 (row + 1, col)
             } else {
-                if random() {
+                if rng.gen() {
                     (row + 1, col)
                 } else {
                     (row, col + 1)
@@ -26,7 +26,8 @@ fn binary_tree_algorithm(grid: &mut Grid) {
 fn main() {
     let mut g = Grid::new(4, 4, 1, 0);
 
-    binary_tree_algorithm(&mut g);
+    let mut rng = thread_rng();
+    binary_tree_algorithm(&mut g, &mut rng);
 
     println!("{}", g);
 }
