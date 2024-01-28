@@ -4,8 +4,8 @@ use std::fmt;
 pub struct Grid {
     pub rows: u32,
     pub columns: u32,
-    pub cell_width: usize, // XXX default this to 1
-    pub cell_height: u32, // XXX default this to 0
+    cell_width: usize, // XXX default this to 1
+    cell_height: u32, // XXX default this to 0
     linked_cells: HashSet<((u32, u32), (u32, u32))>, // XXX default this to an empty set
 }
 
