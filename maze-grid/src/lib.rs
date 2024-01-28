@@ -6,10 +6,20 @@ pub struct Grid {
     pub columns: u32,
     pub cell_width: usize, // XXX default this to 1
     pub cell_height: u32, // XXX default this to 0
-    pub linked_cells: HashSet<((u32, u32), (u32, u32))>, // XXX default this to an empty set
+    linked_cells: HashSet<((u32, u32), (u32, u32))>, // XXX default this to an empty set
 }
 
 impl Grid {
+    pub fn new(rows: u32, columns: u32, cell_width: usize, cell_height: u32) -> Grid {
+        Grid{
+            rows: rows,
+            columns: columns,
+            cell_width: cell_width,
+            cell_height: cell_height,
+            linked_cells: HashSet::new(),
+        }
+    }
+
     fn has_wall(&self, cell_a: (u32, u32), cell_b: (u32, u32)) -> bool {
         let row_diff = (cell_a.0 as i32) - (cell_b.0 as i32);
         let col_diff = (cell_a.1 as i32) - (cell_b.1 as i32);
