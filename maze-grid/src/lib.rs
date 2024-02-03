@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 use std::fmt;
 
+use rand::prelude::*;
+
 pub struct Grid {
     pub rows: u32,
     pub columns: u32,
@@ -126,6 +128,35 @@ impl fmt::Display for Grid {
         write!(f, "{}", "─".repeat(self.cell_width))?;
         write!(f, "┘")
     }
+}
+
+pub fn neighbors(grid: &Grid, cell: &(u32, u32)) -> Vec<(u32, u32)> {
+    let mut res = Vec::new();
+    for (d_row, d_col) in &[(0, -1), (0, 1), (-1, 0), (1, 0)] {
+        let neighbor_row = cell.0 as i32 + d_row;
+        if neighbor_row < 0 || neighbor_row >= grid.rows as i32 {
+            continue;
+        }
+
+        let neighbor_col = cell.1 as i32 + d_col;
+        if neighbor_col < 0 || neighbor_col >= grid.columns as i32 {
+            continue;
+        }
+
+        res.push((neighbor_row as u32, neighbor_col as u32));
+    }
+    res
+}
+
+pub fn random_neighbor(grid: &Grid, rng: &mut ThreadRng, cell: &(u32, u32)) -> (u32, u32) {
+    return *neighbors(grid, cell).choose(rng).unwrap();
+}
+
+pub fn random_cell(grid: &Grid, rng: &mut ThreadRng) -> (u32, u32) {
+    (
+        (0..grid.rows).choose(rng).unwrap(),
+        (0..grid.columns).choose(rng).unwrap(),
+    )
 }
 
 #[cfg(test)]
