@@ -5,24 +5,14 @@ use rand::prelude::*;
 use maze_grid::{Grid, neighbors, random_cell};
 
 fn hunt_kill_algorithm(grid: &mut Grid, rng: &mut ThreadRng) {
-    let mut unvisited = HashSet::new();
-    for row in 0..grid.rows {
-        for col in 0..grid.columns {
-            unvisited.insert((row, col));
-        }
-    }
+    let mut unvisited = (0..grid.rows).flat_map(|row| (0..grid.columns).map(move |col| (row, col))).collect::<HashSet<_>>();
 
     // pick a random starting point
     let mut current = random_cell(grid, rng);
     unvisited.remove(&current);
 
     while !unvisited.is_empty() {
-        let mut unvisited_neighbors = Vec::new();
-        for n in neighbors(grid, &current) {
-            if unvisited.contains(&n) {
-                unvisited_neighbors.push(n);
-            }
-        }
+        let unvisited_neighbors = neighbors(grid, &current).into_iter().filter(|n| unvisited.contains(n)).collect::<Vec<_>>();
 
         // if the current cell has unvisited neighbors, choose one at random,
         // link them, and continue onward from that neighbor
@@ -36,12 +26,7 @@ fn hunt_kill_algorithm(grid: &mut Grid, rng: &mut ThreadRng) {
                 for col in 0..grid.columns {
                     let candidate = (row, col);
                     if unvisited.contains(&candidate) {
-                        let mut visited_neighbors = Vec::new();
-                        for n in neighbors(grid, &candidate) {
-                            if !unvisited_neighbors.contains(&n) {
-                                visited_neighbors.push(n);
-                            }
-                        }
+                        let visited_neighbors = neighbors(grid, &candidate).into_iter().filter(|n| !unvisited.contains(n)).collect::<Vec<_>>();
 
                         if visited_neighbors.len() > 0 {
                             // once you've found an unvisited cell with at least one visited
