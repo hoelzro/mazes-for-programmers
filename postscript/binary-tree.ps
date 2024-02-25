@@ -1,0 +1,326 @@
+%! Binary tree algorithm
+
+/getifknown { %args dict key
+  2 copy known
+  { get } % if the key is in the dict
+  { pop pop false } % otherwise, fall back to false, discarding the arguments
+  ifelse
+} def
+
+/drawwall { %args wall wallkey cell_size x_mult y_mult
+  % calculate relative Y movement
+  2 index mul
+
+  % calculate relative X movement
+  3 1 roll mul
+
+  % Y X → X Y
+  exch
+
+  % move walls and wallkey to the top of the stack
+  4 2 roll
+
+  % look up wallkey within walls
+  getifknown
+
+  { rlineto } % draw the wall if it's there
+  { rmoveto } % otherwise, just move the cursor
+  ifelse
+} def
+
+/drawcell { %args walls cell_size row_num col_num
+  % stash the current position and move it below the arguments
+  currentpoint
+  6 2 roll
+
+  % calculate X coordinate: (col_num-1) * cell_size
+  0 index
+  1 sub
+  3 index
+  mul
+
+  % calculate Y coordinate: (row_num-1) * cell_size
+  2 index
+  1 sub
+  4 index
+  mul
+
+  rmoveto
+
+  % we're done with row_num and col_num, so you can drop them
+  pop pop
+
+  % draw each wall
+  1 index /south 2 index  1  0 drawwall
+  1 index /east  2 index  0  1 drawwall
+  1 index /north 2 index -1  0 drawwall
+  1 index /west  2 index  0 -1 drawwall
+
+  % drop walls and cell_size
+  pop pop
+
+  % restore cursor position
+  moveto
+} def
+
+/eachcell { %args num_rows num_cols block
+  % rotate num_cols and block to the bottom of the stack for later
+  count -2 roll
+
+  % iterate over num_rows
+  1 1
+  3 -1 roll
+  {
+    % grab num_cols from the bottom of the stack
+    count 1 sub index
+
+    % iterate over num_cols
+    1 1
+    3 -1 roll
+    {
+      % grab block from the bottom of the stack
+      count 2 sub index
+      exec
+
+      % clear col_num for the next iteration
+      pop
+    } for
+
+    % clear row_num for the next iteration
+    pop
+  } for
+
+  % remove num_cols and block from the bottom of the stack
+  count -2 roll pop pop
+} def
+
+/calculateopenwalls { %args grid row_num col_num
+  % extract the smashedwalls part
+  3 -1 roll
+  /smashedwalls get
+  3 1 roll
+
+  % calculate the upper 30 bits of the key
+
+  % first, the row part
+  exch 17 bitshift
+
+  % next, the column part
+  exch 2 bitshift
+
+  % now OR them together to make the (row, col) part of the key
+  or
+
+  % create a dictionary for the results, and put it below the grid
+  4 dict
+  3 1 roll
+
+  % check for /west
+  3 copy
+  0 or
+  known not
+  /west
+  exch
+  put
+
+  % check for /east
+  3 copy
+  1 or
+  known not
+  /east
+  exch
+  put
+
+  % check for /north
+  3 copy
+  2 or
+  known not
+  /north
+  exch
+  put
+
+  % check for /south
+  3 copy
+  3 or
+  known not
+  /south
+  exch
+  put
+
+  % remove the grid and the (row, col) part of the key from the stack
+  pop pop
+} def
+
+/drawgrid { %args grid
+  dup /rows get
+  1 index /columns get
+  { %args row_num col_num
+    3 copy calculateopenwalls
+    20 %tag cell_size
+    3 index
+    3 index
+    drawcell
+  } eachcell
+} def
+
+/newsmashedwalls {
+  << >>
+} def
+
+/oppositedirection { %args direction
+  dup /west  eq { /east exch } if
+  dup /east  eq { /west exch } if
+  dup /north eq { /south exch } if
+  dup /south eq { /north exch } if
+
+  % remove the argument from the stack
+  pop
+} def
+
+/neighbor { %args row col direction
+  %               Row           Column
+  dup /north eq { 2 index 1 add 2 index       } if
+  dup /south eq { 2 index 1 sub 2 index       } if
+  dup /west  eq { 2 index       2 index 1 sub } if
+  dup /east  eq { 2 index       2 index 1 add } if
+
+  % XXX bounds checks?
+
+  % remove the arguments from the stack
+  5 -3 roll pop pop pop
+} def
+
+% XXX better name
+/smashwalloneway { %args grid row column direction
+  % calculate the bottom two bits based on direction
+  dup /west eq  { 0 } if
+  dup /east eq  { 1 } if
+  dup /north eq { 2 } if
+  dup /south eq { 3 } if
+
+  exch pop % remove the direction
+
+  exch 2 bitshift or % put the column on the top of the stack, put it into bits 2-16, and OR it with the encoded direction
+  exch 17 bitshift or % put the row on the top of the stack, put it into bits 17-31, and OR it with the encoded column+direction
+
+  exch /smashedwalls get exch % extract the smashedwalls dict from the grid, and then put it under our key
+  true put % and then put "true" as the value
+} def
+
+/smashwall { %args grid row column direction
+  4 copy neighbor inbounds {
+    % if there's a neighbor in that direction, go ahead and smash the walls
+    4 copy smashwalloneway % smash in the first direction
+
+    % calculate the opposite direction, and then squirrel it away for later
+    dup oppositedirection
+    4 1 roll
+
+    % calculate the neighbor, and then move our opposite direction back into place
+    neighbor
+    3 -1 roll
+
+    % …then smash the wall, baby
+    smashwalloneway
+  } {
+    % otherwise, clean up the arguments
+    pop pop pop pop
+  } ifelse
+} def
+
+/inbounds { %args grid row column
+  % get row count
+  2 index /rows get
+
+  % compare row to row count
+  2 index ge
+  % …and put that below the grid for later
+  4 1 roll
+
+  % get column count
+  2 index /columns get
+
+  % compare column to column count
+  1 index ge
+  % …and put that below the grid for later
+  4 1 roll
+
+  % make sure column is greater than 0
+  0 gt
+
+  % …and put that below the grid for later
+  3 1 roll
+
+  % make sure row is greater than 0
+  0 gt
+
+  % move that result below the grid, then remove the grid
+  exch pop
+
+  % AND together all of the results
+  and and and
+} def
+
+/toentries { %args dict
+  dup length 2 mul array % create an array big enough to hold the key/value pairs
+  0 %tag starting_offset
+  2 index
+  { %args entries offset key value
+    3 index % copy entries to the top
+    3 index % copy offset to the top
+    1 add % add 1, since we're squirreling away the value
+    3 -1 roll put % put the value into the array
+
+    2 index % copy entries to the top again
+    2 index % copy offset to the top again
+    3 -1 roll put % put the key into the array
+
+    2 add % add 2 to the offset for the next iteration
+  } forall
+
+  pop % remove the offset from the stack
+  exch pop % remove the dict from the stack
+} def
+
+/binarytree { %args grid
+  dup /rows get
+  1 index /columns get
+  {
+    % if we have a neighbor to the north…
+    3 copy /north neighbor inbounds
+    {
+      % …and we have a neighbor to the east…
+      3 copy /east neighbor inbounds
+      {
+        % …then choose one of those at random
+        3 copy
+        rand 2 mod 0 eq
+        { /north }
+        { /east  } ifelse
+        smashwall
+      }
+      {
+        % otherwise, choose the north neighbor
+        3 copy /north smashwall
+      } ifelse
+    }
+    {
+      % otherwise, if we have a neighbor to the east…
+      3 copy /east neighbor inbounds
+      {
+        % …then choose the east neighbor
+        3 copy /east smashwall
+      } if
+    } ifelse
+  } eachcell
+} def
+
+realtime srand
+
+newpath
+50 50 moveto
+<< /rows 4 /columns 4 /smashedwalls newsmashedwalls >>
+binarytree
+drawgrid
+2 setlinewidth
+stroke
