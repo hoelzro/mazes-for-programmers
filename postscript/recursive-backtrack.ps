@@ -1,0 +1,604 @@
+%! Recursive backtracking algorithm
+
+/directions [ /west /east /north /south ] def
+
+/oppositedirection { %args direction
+  dup /west  eq { /east exch } if
+  dup /east  eq { /west exch } if
+  dup /north eq { /south exch } if
+  dup /south eq { /north exch } if
+
+  % remove the argument from the stack
+  pop
+} def
+
+/neighbor { %args row col direction
+  %               Row           Column
+  dup /north eq { 2 index 1 add 2 index       } if
+  dup /south eq { 2 index 1 sub 2 index       } if
+  dup /west  eq { 2 index       2 index 1 sub } if
+  dup /east  eq { 2 index       2 index 1 add } if
+
+  % XXX bounds checks?
+
+  % remove the arguments from the stack
+  5 -3 roll pop pop pop
+} def
+
+% XXX better name
+/smashwalloneway { %args grid row column direction
+  % calculate the bottom two bits based on direction
+  dup /west eq  { 0 } if
+  dup /east eq  { 1 } if
+  dup /north eq { 2 } if
+  dup /south eq { 3 } if
+
+  exch pop % remove the direction
+
+  exch 2 bitshift or % put the column on the top of the stack, put it into bits 2-16, and OR it with the encoded direction
+  exch 17 bitshift or % put the row on the top of the stack, put it into bits 17-31, and OR it with the encoded column+direction
+
+  exch /smashedwalls get exch % extract the smashedwalls dict from the grid, and then put it under our key
+  true put % and then put "true" as the value
+} def
+
+/smashwall { %args grid row column direction
+  4 copy neighbor inbounds {
+    % if there's a neighbor in that direction, go ahead and smash the walls
+    4 copy smashwalloneway % smash in the first direction
+
+    % calculate the opposite direction, and then squirrel it away for later
+    dup oppositedirection
+    4 1 roll
+
+    % calculate the neighbor, and then move our opposite direction back into place
+    neighbor
+    3 -1 roll
+
+    % …then smash the wall, baby
+    smashwalloneway
+  } {
+    % otherwise, clean up the arguments
+    pop pop pop pop
+  } ifelse
+} def
+
+/inbounds { %args grid row column
+  % get row count
+  2 index /rows get
+
+  % compare row to row count
+  2 index ge
+  % …and put that below the grid for later
+  4 1 roll
+
+  % get column count
+  2 index /columns get
+
+  % compare column to column count
+  1 index ge
+  % …and put that below the grid for later
+  4 1 roll
+
+  % make sure column is greater than 0
+  0 gt
+
+  % …and put that below the grid for later
+  3 1 roll
+
+  % make sure row is greater than 0
+  0 gt
+
+  % move that result below the grid, then remove the grid
+  exch pop
+
+  % AND together all of the results
+  and and and
+} def
+
+/getifknown { %args dict key
+  2 copy known
+  { get } % if the key is in the dict
+  { pop pop false } % otherwise, fall back to false, discarding the arguments
+  ifelse
+} def
+
+/drawwall { %args wall wallkey cell_size x_mult y_mult
+  % calculate relative Y movement
+  2 index mul
+
+  % calculate relative X movement
+  3 1 roll mul
+
+  % Y X → X Y
+  exch
+
+  % move walls and wallkey to the top of the stack
+  4 2 roll
+
+  % look up wallkey within walls
+  getifknown
+
+  { rlineto } % draw the wall if it's there
+  { rmoveto } % otherwise, just move the cursor
+  ifelse
+} def
+
+/drawcell { %args walls cell_size row_num col_num
+  % stash the current position and move it below the arguments
+  currentpoint
+  6 2 roll
+
+  % calculate X coordinate: (col_num-1) * cell_size
+  0 index
+  1 sub
+  3 index
+  mul
+
+  % calculate Y coordinate: (row_num-1) * cell_size
+  2 index
+  1 sub
+  4 index
+  mul
+
+  rmoveto
+
+  % we're done with row_num and col_num, so you can drop them
+  pop pop
+
+  % draw each wall
+  1 index /south 2 index  1  0 drawwall
+  1 index /east  2 index  0  1 drawwall
+  1 index /north 2 index -1  0 drawwall
+  1 index /west  2 index  0 -1 drawwall
+
+  % drop walls and cell_size
+  pop pop
+
+  % restore cursor position
+  moveto
+} def
+
+/eachcell { %args num_rows num_cols block
+  % rotate num_cols and block to the bottom of the stack for later
+  count 2 roll
+
+  % iterate over num_rows
+  1 1
+  3 -1 roll
+  {
+    % grab num_cols from the bottom of the stack
+    count 1 sub index
+
+    % iterate over num_cols
+    1 1
+    3 -1 roll
+    {
+      % grab block from the bottom of the stack
+      count 2 sub index
+      exec
+
+      % clear col_num for the next iteration
+      pop
+    } for
+
+    % clear row_num for the next iteration
+    pop
+  } for
+
+  % remove num_cols and block from the bottom of the stack
+  count -2 roll pop pop
+} def
+
+/calculateopenwalls { %args grid row_num col_num
+  % extract the smashedwalls part
+  3 -1 roll
+  /smashedwalls get
+  3 1 roll
+
+  % calculate the upper 30 bits of the key
+
+  % first, the row part
+  exch 17 bitshift
+
+  % next, the column part
+  exch 2 bitshift
+
+  % now OR them together to make the (row, col) part of the key
+  or
+
+  % create a dictionary for the results, and put it below the grid
+  4 dict
+  3 1 roll
+
+  % check for /west
+  3 copy
+  0 or
+  known not
+  /west
+  exch
+  put
+
+  % check for /east
+  3 copy
+  1 or
+  known not
+  /east
+  exch
+  put
+
+  % check for /north
+  3 copy
+  2 or
+  known not
+  /north
+  exch
+  put
+
+  % check for /south
+  3 copy
+  3 or
+  known not
+  /south
+  exch
+  put
+
+  % remove the grid and the (row, col) part of the key from the stack
+  pop pop
+} def
+
+/drawgrid { %args grid
+  dup /rows get
+  1 index /columns get
+  { %args row_num col_num
+    3 copy calculateopenwalls
+    20 %tag cell_size
+    3 index
+    3 index
+    drawcell
+  } eachcell
+} def
+
+/newsmashedwalls {
+  << >>
+} def
+
+/toentries { %args dict
+  dup length 2 mul array % create an array big enough to hold the key/value pairs
+  0 %tag starting_offset
+  2 index
+  { %args entries offset key value
+    3 index % copy entries to the top
+    3 index % copy offset to the top
+    1 add % add 1, since we're squirreling away the value
+    3 -1 roll put % put the value into the array
+
+    2 index % copy entries to the top again
+    2 index % copy offset to the top again
+    3 -1 roll put % put the key into the array
+
+    2 add % add 2 to the offset for the next iteration
+  } forall
+
+  pop % remove the offset from the stack
+  exch pop % remove the dict from the stack
+} def
+
+/newunvisited { %args num_rows num_cols
+  % calculate our dictionary size
+  2 copy
+  mul
+  % create a dict of that size
+  dict
+
+  % move it below the num_rows/num_cols and then initialize it with eachcell
+  3 1 roll
+
+  {
+    3 copy
+
+    exch
+    16 bitshift
+    or
+
+    true put
+  } eachcell
+} def
+
+/isvisited { %args unvisited row col
+  % determine the (row, col) key
+  exch
+  16 bitshift
+  or
+
+  % look up the key
+  known not
+} def
+
+/markvisited { %args unvisited row col
+  % determine the (row, col) key
+  exch
+  16 bitshift
+  or
+
+  % remove the key
+  undef
+} def
+
+/isempty { %args set
+  length 0 eq
+} def
+
+/newstack {
+  << /insertpos 0 /values [ null ] >>
+} def
+
+/stackpush { %args stack value
+  % compare the insert position to the current size of our array
+  1 index
+  dup
+  /insertpos get
+  exch
+  /values get
+  length
+  ge
+
+  % …growing it if necessary
+  {
+    % dig out the stack
+    1 index
+
+    % create an array twice the size, then copy the existing values into it
+    dup
+    /values get
+    dup
+    length
+    2 mul
+    array
+    exch
+    1 index
+    copy
+    pop
+
+    % replace the values array with our new one
+    /values
+    exch
+    put
+  } if
+
+  % increment insertpos, but leave a copy of the old value on the stack for later
+  1 index
+  dup
+  /insertpos get
+  dup
+  1 add
+  3 -1 roll
+  exch
+  /insertpos
+  exch
+  put
+
+  % move index and value into place for upcoming put operation
+  exch 
+
+  % move stack up to the top, grab values, move it back into place for put
+  3 -1 roll
+  /values get
+  3 1 roll
+
+  % then actually do the put
+  put
+} def
+
+% XXX check for underflow?
+/stackpop { %args stack
+  % decrement insertpos
+  dup
+  /insertpos get
+  1 sub
+  dup
+  2 index
+  exch
+  /insertpos
+  exch
+  put
+
+  % get the element at the new position
+  exch
+  /values get
+  exch
+  get
+} def
+
+% XXX check for underflow?
+/stackpeek { %args stack
+  dup
+  /values get
+  exch
+  /insertpos get
+  1 sub
+  get
+} def
+
+/randomcell { %args num_rows num_cols
+  % pick a random row
+  exch
+  rand
+  exch
+  mod
+  1 add
+  exch % move the row under num_cols
+
+  % pick a random column
+  rand
+  exch
+  mod
+  1 add
+} def
+
+/unvisitedneighbors { %args grid unvisited row column
+  % allocate a dictionary to hold potential neighbors
+  4 dict
+
+  [
+    [/west   0 -1 ]
+    [/east   0  1 ]
+    [/north  1  0 ]
+    [/south -1  0 ]
+  ]
+
+  {
+    aload
+    pop
+
+    % add deltas to get neighbor row and column
+    exch
+    5 index
+    add
+    exch
+
+    4 index
+    add
+
+    % create the key for unvisited
+    exch
+    16 bitshift
+    or
+
+    % look up the key in unvisited
+    5 index % get unvisited
+    exch % put neighbor_key on top
+    known
+
+    {
+      % if it's there, store the key into the results dictionary
+      1 index % get the dictionary
+      exch
+      true
+      put
+    }
+    {
+      % otherwise, just pop the key for the next iteration
+      pop
+    } ifelse
+  } forall
+
+  % remove our arguments, leaving the dict around
+  5 1 roll
+  pop pop pop pop
+} def
+
+/randneighbor { %args neighbor_set
+  % convert to array of key/value entries
+  toentries
+
+  % get a random number between 0 and the number of keys
+  dup
+  length
+  2 idiv
+  rand
+  exch
+  mod
+
+  % multiply by 2 to get the index of a key, and actually get that key
+  2 mul
+  get
+} def
+
+/recursivebacktrack { %args grid
+  newstack %tag path
+
+  1 index /rows get
+  2 index /columns get
+  newunvisited %tag unvisited
+
+  % pick a random starting point…
+  2 index /rows get
+  3 index /columns get
+  randomcell
+
+  % …mark it as visited…
+  3 copy
+  markvisited
+
+  % …and add it to the path stack.
+  [
+    2 index
+    2 index
+  ]
+  4 index
+  exch
+  stackpush
+
+  pop pop % remove the random cell
+
+  {
+    % stack should be `grid path unvisited`
+
+    % if our unvisited set is empty, stop looping
+    dup isempty
+    {
+      exit
+    } if
+
+    % start a single-iteration repeat block so we can exit early in case of no unvisited neighbors
+    1 {
+      % get the cell on the top of the stack, and expand it to call unvisitedneighbors
+      1 index stackpeek
+      aload pop
+
+      2 copy
+      % get grid and unvisited args for unvisitedneighbors call
+      6 index
+      5 index
+      % move the row/column up to the top
+      4 -2 roll
+
+      unvisitedneighbors
+
+      % if there are no unvisited neighbors, pop the stack and restart the loop
+      dup isempty {
+        pop % remove the empty unvisited neighbors set
+        pop % remove the column
+        pop % remove the row
+
+        1 index stackpop % pop the stack
+        pop % remove the cell we just popped
+        exit % exit the single-iteration repeat to start the loop-loop anew
+      } if
+
+      randneighbor
+
+      % duplicate row/column/direction
+      3 copy
+      8 index % grab the grid for smashwall and move it into place
+      4 1 roll
+
+      smashwall
+
+      neighbor
+
+      % remove that neighbor from unvisited
+      3 copy
+      markvisited
+
+      % push the neighbor onto the path stack
+      3 index
+      3 1 roll
+      [
+        3 1 roll
+      ]
+      stackpush
+    } repeat
+  } loop
+  pop pop pop % remove grid, path, and unvisited from the stack
+} def
+
+newpath
+50 50 moveto
+<< /rows 20 /columns 20 /smashedwalls newsmashedwalls >>
+dup
+recursivebacktrack
+drawgrid
+2 setlinewidth
+stroke
