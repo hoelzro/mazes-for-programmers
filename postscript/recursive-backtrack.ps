@@ -594,11 +594,27 @@
   pop pop pop % remove grid, path, and unvisited from the stack
 } def
 
-newpath
-50 50 moveto
+% seed the RNG with the current time (ish - just get a large integer value by assuming every month is 31 days)
+(%Calendar%) currentdevparams
+
+     dup /Year   get 32140800 mul
+exch dup /Month  get 2678400  mul
+exch dup /Day    get 86400    mul
+exch dup /Hour   get 3600     mul
+exch dup /Minute get 60       mul
+exch     /Second get
+
+5 { add } repeat
+srand
+
+% actually generate the maze
 << /rows 20 /columns 20 /smashedwalls newsmashedwalls >>
 dup
 recursivebacktrack
+
+% …and then draw it
+newpath
+50 50 moveto
 drawgrid
 2 setlinewidth
 stroke
